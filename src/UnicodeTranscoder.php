@@ -143,7 +143,7 @@ class UnicodeTranscoder implements UnicodeTranscoderInterface
                     --$next_byte;
                 } else {
                     if (self::$safe_mode) {
-                        $output[$out_len - 1] = ord(self::$safe_char);
+                        $output[$out_len - 1] = self::$safe_char;
                         $k--;
                         $mode = 'next';
                         continue;
@@ -172,7 +172,7 @@ class UnicodeTranscoder implements UnicodeTranscoderInterface
         $output = '';
         foreach ($input as $k => $v) {
             if ($v < 128) { // 7bit are transferred literally
-                $output .= chr($v);
+                $output .= chr((int) $v & 0xFF);
             } elseif ($v < (1 << 11)) { // 2 bytes
                 $output .= chr(192 + ($v >> 6)) . chr(128 + ($v & 63));
             } elseif ($v < (1 << 16)) { // 3 bytes
@@ -355,6 +355,6 @@ class UnicodeTranscoder implements UnicodeTranscoderInterface
             return mb_strlen($string, '8bit');
         }
 
-        return strlen((binary) $string);
+        return strlen((string) $string);
     }    
 }

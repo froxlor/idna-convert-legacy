@@ -134,7 +134,8 @@ class Punycode implements PunycodeInterface
 
         for ($enco_idx = ($delim_pos) ? ($delim_pos + 1) : 0; $enco_idx < $enco_len; ++$deco_len) {
             for ($old_idx = $idx, $w = 1, $k = self::base; 1; $k += self::base) {
-                $digit = $this->decodeDigit($encoded[$enco_idx++]);
+                $digit = $this->decodeDigit(isset($encoded[$enco_idx]) ? $encoded[$enco_idx] : '');
+                ++$enco_idx;
                 $idx += $digit * $w;
                 $t = ($k <= $bias) ? self::tMin :
                         (($k >= $bias + self::tMax) ? self::tMax : ($k - $bias));
@@ -302,7 +303,7 @@ class Punycode implements PunycodeInterface
      */
     protected function decodeDigit($cp)
     {
-        $cp = ord($cp);
+        $cp = ($cp === '') ? 0 : ord($cp);
         if ($cp - 48 < 10) {
             return $cp - 22;
         }
@@ -565,6 +566,6 @@ class Punycode implements PunycodeInterface
             return mb_strlen($string, '8bit');
         }
 
-        return strlen((binary) $string);
+        return strlen((string) $string);
     }
 }
