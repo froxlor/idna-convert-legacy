@@ -26,11 +26,11 @@ class ToUtf8 implements EncodingHelperInterface
         }
 
         if ($this->encoding === 'ISO-8859-1') {
-            return utf8_encode($sourceString);
+            return $this->encodeIso8859_1ToUtf8($sourceString);
         }
 
         if ($this->encoding === 'WINDOWS-1252') {
-            return utf8_encode($this->mapWindows1252ToIso8859_1($sourceString));
+            return $this->encodeIso8859_1ToUtf8($this->mapWindows1252ToIso8859_1($sourceString));
         }
 
         if ($this->encoding === 'UNICODE-1-1-UTF-7') {
@@ -83,6 +83,29 @@ class ToUtf8 implements EncodingHelperInterface
                     break;
                 default:
                     $return .= chr($codePoint);
+            }
+        }
+
+        return $return;
+    }
+
+    /**
+     * Drop-in replacement for utf8_encode(), which is deprecated as of PHP 8.2
+     *
+     * @param string $string Your input in ISO-8859-1
+     *
+     * @return string The resulting UTF-8 string
+     */
+    private function encodeIso8859_1ToUtf8(string $string): string
+    {
+        $return = '';
+        $length = strlen($string);
+        for ($i = 0; $i < $length; ++$i) {
+            $codePoint = ord($string[$i]);
+            if ($codePoint < 0x80) {
+                $return .= $string[$i];
+            } else {
+                $return .= chr(0xC0 | ($codePoint >> 6)) . chr(0x80 | ($codePoint & 0x3F));
             }
         }
 

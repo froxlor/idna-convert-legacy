@@ -26,11 +26,11 @@ class FromUtf8 implements EncodingHelperInterface
         }
 
         if ($this->encoding === 'ISO-8859-1') {
-            return utf8_decode($sourceString);
+            return $this->decodeUtf8ToIso8859_1($sourceString);
         }
 
         if ($this->encoding === 'WINDOWS-1252') {
-            return self::mapIso8859_1ToWindows1252(utf8_decode($sourceString));
+            return self::mapIso8859_1ToWindows1252($this->decodeUtf8ToIso8859_1($sourceString));
         }
 
         if ($this->encoding === 'UNICODE-1-1-UTF-7') {
@@ -84,6 +84,63 @@ class FromUtf8 implements EncodingHelperInterface
                 default:
                     $return .= chr($codePoint);
             }
+        }
+
+        return $return;
+    }
+
+    /**
+     * Drop-in replacement for utf8_decode(), which is deprecated as of PHP 8.2
+     * Characters outside ISO-8859-1 and malformed UTF-8 sequences are replaced by '?', just like utf8_decode() does
+     *
+     * @param string $string Your input in UTF-8
+     *
+     * @return string The resulting ISO-8859-1 string
+     */
+    private function decodeUtf8ToIso8859_1(string $string): string
+    {
+        $return = '';
+        $length = strlen($string);
+        $position = 0;
+        while ($position < $length) {
+            $lead = ord($string[$position]);
+            $available = $length - $position;
+            $sequenceLength = 1;
+            $codePoint = null;
+
+            if ($lead < 0x80) {
+                $codePoint = $lead;
+            } elseif ($lead >= 0xC2 && $lead <= 0xF4) {
+                $sequenceLength = $lead < 0xE0 ? 2 : ($lead < 0xF0 ? 3 : 4);
+                $codePoint = $lead & (0xFF >> ($sequenceLength + 1));
+                for ($i = 1; $i < $sequenceLength; ++$i) {
+                    $byte = $i < $available ? ord($string[$position + $i]) : null;
+                    if ($byte === null || $byte < 0x80 || $byte > 0xBF) {
+                        $codePoint = null;
+                        break;
+                    }
+                    $codePoint = ($codePoint << 6) | ($byte & 0x3F);
+                }
+                if ($codePoint === null) {
+                    // Malformed sequence: skip up to the first byte that is missing or could start
+                    // a new sequence, otherwise the whole sequence
+                    for ($i = 1; $i < $sequenceLength; ++$i) {
+                        $byte = $i < $available ? ord($string[$position + $i]) : null;
+                        if ($byte === null || $byte < 0x80 || ($byte >= 0xC2 && $byte <= 0xF4)) {
+                            $sequenceLength = $i;
+                            break;
+                        }
+                    }
+                } elseif (($sequenceLength === 3 && ($codePoint < 0x800 || ($codePoint >= 0xD800 && $codePoint <= 0xDFFF)))
+                    || ($sequenceLength === 4 && ($codePoint < 0x10000 || $codePoint > 0x10FFFF))
+                ) {
+                    // Overlong encoding, surrogate or beyond U+10FFFF
+                    $codePoint = null;
+                }
+            }
+
+            $return .= ($codePoint === null || $codePoint > 0xFF) ? '?' : chr($codePoint);
+            $position += $sequenceLength;
         }
 
         return $return;

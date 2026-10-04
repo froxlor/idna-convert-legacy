@@ -176,7 +176,7 @@ class TranscodeUnicode implements TranscodeUnicodeInterface
                     --$nextByte;
                 } else {
                     if ($this->safeMode) {
-                        $output[$outputLength - 1] = ord($this->safeCodepoint);
+                        $output[$outputLength - 1] = $this->safeCodepoint;
                         $k--;
                         $mode = 'next';
 
@@ -212,7 +212,7 @@ class TranscodeUnicode implements TranscodeUnicodeInterface
         $output = '';
         foreach ($input as $k => $v) {
             if ($v < 128) { // 7bit are transferred literally
-                $output .= chr($v);
+                $output .= chr((int) $v & 0xFF);
             } elseif ($v < (1 << 11)) { // 2 bytes
                 $output .= sprintf(
                     '%s%s',
@@ -432,6 +432,6 @@ class TranscodeUnicode implements TranscodeUnicodeInterface
             return mb_strlen($string, '8bit');
         }
 
-        return strlen((binary) $string);
+        return strlen((string) $string);
     }    
 }
