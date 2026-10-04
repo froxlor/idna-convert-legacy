@@ -39,7 +39,7 @@ class FromPunycode extends AbstractPunycode implements PunycodeInterface
 
         for ($encodedIndex = ($delimiterPosition) ? ($delimiterPosition + 1) : 0; $encodedIndex < $encodedLength; ++$decodedLength) {
             for ($oldIndex = $currentIndex, $w = 1, $k = self::base; 1; $k += self::base) {
-                $digit = $this->decodeDigit($encoded[$encodedIndex++]);
+                $digit = $this->decodeDigit($encoded[$encodedIndex++] ?? '');
                 $currentIndex += $digit * $w;
                 $t = ($k <= $bias)
                     ? self::tMin
@@ -96,7 +96,7 @@ class FromPunycode extends AbstractPunycode implements PunycodeInterface
 
     private function decodeDigit(string $cp): int
     {
-        $cp = ord($cp);
+        $cp = ($cp === '') ? 0 : ord($cp);
         if ($cp - 48 < 10) {
             return $cp - 22;
         }
